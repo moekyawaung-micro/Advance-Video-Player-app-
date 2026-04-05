@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Video Player</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #3498db;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Padauk', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+        }
+
+        /* ============== VIDEO PLAYER ============== */
+        .video-player-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: slideInLeft 0.6s ease-out;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .video-element {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        /* Overlay */
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 50%, rgba(0,0,0,0.8) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            opacity: 0;
+            transition: opacity 0.3s;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .video-container:hover .video-overlay,
+        .video-overlay.show {
+            opacity: 1;
+        }
+
+        /* Top Controls */
+        .video-top-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .video-title-mini {
+            font-size: 16px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-top-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .video-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(1.1);
+        }
+
+        /* Bottom Controls */
+        .video-bottom-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            cursor: pointer;
+            position: relative;
+            transition: height 0.2s;
+        }
+
+        .progress-bar:hover {
+            height: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .progress-dot {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 50%;
+            top: 50%;
+            right: -6px;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .progress-bar:hover .progress-dot {
+            opacity: 1;
+        }
+
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .time-display {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.8);
+            min-width: 50px;
+        }
+
+        .right-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+
+        .volume-slider {
+            width: 60px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .volume-bar {
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+        }
+
+        .video-btn.fullscreen {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        /* Quality Badge */
+        .quality-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #667eea;
+            z-index: 5;
+        }
+
+        /* Subtitle/Caption */
+        .captions {
+            position: absolute;
+            bottom: 100px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 14px;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            z-index: 9;
+            display: none;
+        }
+
+        .captions.show {
+            display: block;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            z-index: 8;
+            display: none;
+        }
+
+        .loading-spinner.show {
+            display: block;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* Play Button Overlay */
+        .play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 7;
+            backdrop-filter: blur(5px);
+        }
+
+        .play-overlay:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .play-overlay.hide {
+            display: none;
+        }
+
+        /* Video Info Section */
+        .video-info-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideInUp 0.6s ease-out 0.2s both;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .video-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .video-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 15px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .video-description {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            line-height: 1.6;
+            margin-bottom: 15px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .video-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.6);
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        /* ============== SIDEBAR ============== */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: fit-content;
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: slideInRight 0.6s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .settings-header {
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .settings-content {
+            padding: 15px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .settings-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .settings-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+        }
+
+        .settings-value {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 12px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .settings-value:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .settings-value.active {
+            background: rgba(102, 126, 234, 0.2);
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .slider-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .slider-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+        }
+
+        .slider-value {
+            font-size: 12px;
+            color: #667eea;
+            min-width: 30px;
+            text-align: right;
+        }
+
+        /* Quick Controls */
+        .quick-controls {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 15px 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .quick-btn {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-transform: uppercase;
+        }
+
+        .quick-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .quick-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+        }
+
+        /* Playlist */
+        .playlist-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .playlist-header-mini {
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .playlist-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .playlist-item-mini {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+
+        .playlist-item-mini:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .playlist-item-mini.active {
+            background: rgba(102, 126, 234, 0.2);
+            border-left-color: #667eea;
+            color: #667eea;
+        }
+
+        /* Dropdown Menu */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            position: absolute;
+            background: rgba(30, 30, 50, 0.95);
+            min-width: 150px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            top: 100%;
+            right: 0;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .dropdown-content.show {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-item {
+            padding: 12px 15px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(102, 126, 234, 0.2);
+            padding-left: 20px;
+        }
+
+        .dropdown-item.active {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        /* Keyboard Shortcuts Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 200;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: rgba(30, 30, 50, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: white;
+            background: none;
+            border: none;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .shortcut-group {
+            margin-bottom: 20px;
+        }
+
+        .shortcut-group-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #667eea;
+            margin-bottom: 10px;
+            opacity: 0.7;
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .shortcut-key {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        /* ============== RESPONSIVE ============== */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                flex-direction: row;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .video-container {
+                aspect-ratio: 16 / 9;
+            }
+
+            .controls-bar {
+                flex-wrap: wrap;
+            }
+
+            .quick-controls {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .sidebar {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .video-title {
+                font-size: 18px;
+            }
+
+            .video-meta {
+                gap: 10px;
+            }
+
+            .settings-content {
+                gap: 12px;
+            }
+
+            .quick-controls {
+                gap: 8px;
+            }
+
+            .quick-btn {
+                padding: 10px;
+                font-size: 10px;
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #764ba2 0%, #667eea 100%);
+        }
+
+        /* Floating Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(30, 30, 50, 0.95);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #667eea;
+            animation: slideInUp 0.3s ease-out;
+            z-index: 300;
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+        }
+
+        .toast.hide {
+            animation: slideOutDown 0.3s ease-out forwards;
+        }
+
+        @keyframes slideOutDown {
+            to {
+                opacity: 0;
+                transform: translateY(100px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Video Player -->
+        <div class="video-player-section">
+            <!-- Video Container -->
+            <div class="video-container" id="videoContainer">
+                <video class="video-element" id="videoPlayer" controls></video>
+
+                <!-- Quality Badge -->
+                <div class="quality-badge" id="qualityBadge">4K</div>
+
+                <!-- Captions -->
+                <div class="captions" id="captions"></div>
+
+                <!-- Loading Spinner -->
+                <div class="loading-spinner" id="loadingSpinner"></div>
+
+                <!-- Play Overlay -->
+                <div class="play-overlay" id="playOverlay" onclick="togglePlayPause()">▶</div>
+
+                <!-- Video Overlay -->
+                <div class="video-overlay" id="videoOverlay">
+                    <!-- Top Controls -->
+                    <div class="video-top-controls">
+                        <div class="video-title-mini" id="videoTitleMini">Loading...</div>
+                        <div class="video-top-buttons">
+                            <button class="video-btn" onclick="toggleSubtitles()" title="Subtitles"><i class="fas fa-closed-captioning"></i></button>
+                            <button class="video-btn" onclick="toggleSettings()" title="Settings"><i class="fas fa-gear"></i></button>
+                            <button class="video-btn" onclick="showShortcuts()" title="Help"><i class="fas fa-question"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Controls -->
+                    <div class="video-bottom-controls">
+                        <!-- Progress Bar -->
+                        <div class="progress-bar" id="progressBar" onclick="seek(event)">
+                            <div class="progress-fill" id="progressFill">
+                                <div class="progress-dot"></div>
+                            </div>
+                        </div>
+
+                        <!-- Control Bar -->
+                        <div class="controls-bar">
+                            <button class="video-btn" onclick="togglePlayPause()" id="playBtn" title="Play"><i class="fas fa-play"></i></button>
+
+                            <div class="time-display">
+                                <span id="currentTime">0:00</span> / <span id="duration">0:00</span>
+                            </div>
+
+                            <div style="flex: 1;"></div>
+
+                            <div class="right-controls">
+                                <div class="volume-control">
+                                    <i class="fas fa-volume-high" style="font-size: 14px;"></i>
+                                    <div class="volume-slider" id="volumeSlider" onclick="setVolume(event)">
+                                        <div class="volume-bar" id="volumeBar" style="width: 70%;"></div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown">
+                                    <button class="video-btn" onclick="toggleQualityDropdown()" title="Quality"><i class="fas fa-film"></i></button>
+                                    <div class="dropdown-content" id="qualityDropdown">
+                                        <div class="dropdown-item active" onclick="setQuality('4K')">4K</div>
+                                        <div class="dropdown-item" onclick="setQuality('1080p')">1080p</div>
+                                        <div class="dropdown-item" onclick="setQuality('720p')">720p</div>
+                                        <div class="dropdown-item" onclick="setQuality('480p')">480p</div>
+                                    </div>
+                                </div>
+
+                                <div class="dropdown">
+                                    <button class="video-btn" onclick="toggleSpeedDropdown()" title="Speed"><i class="fas fa-gauge"></i></button>
+                                    <div class="dropdown-content" id="speedDropdown">
+                                        <div class="dropdown-item" onclick="setSpeed(0.5)">0.5x</div>
+                                        <div class="dropdown-item" onclick="setSpeed(0.75)">0.75x</div>
+                                        <div class="dropdown-item active" onclick="setSpeed(1)">1x (Normal)</div>
+                                        <div class="dropdown-item" onclick="setSpeed(1.25)">1.25x</div>
+                                        <div class="dropdown-item" onclick="setSpeed(1.5)">1.5x</div>
+                                        <div class="dropdown-item" onclick="setSpeed(2)">2x</div>
+                                    </div>
+                                </div>
+
+                                <button class="video-btn" onclick="togglePIP()" title="Picture in Picture"><i class="fas fa-window-restore"></i></button>
+                                <button class="video-btn fullscreen" onclick="toggleFullscreen()" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Info -->
+            <div class="video-info-section">
+                <div class="video-title" id="videoTitle">Sample Video Title</div>
+
+                <div class="video-meta">
+                    <div class="meta-item">
+                        <i class="fas fa-eye"></i>
+                        <span id="viewCount">1.2M</span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span id="likeCount">45K</span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-calendar"></i>
+                        <span id="uploadDate">2024-01-15</span>
+                    </div>
+                    <div class="meta-item">
+                        <i class="fas fa-user"></i>
+                        <span id="channel">Tech Channel</span>
+                    </div>
+                </div>
+
+                <div class="video-description" id="videoDescription">
+                    This is a sample video description. It contains information about the video content and other relevant details that users might want to know before watching.
+                </div>
+
+                <div class="video-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="resolutionStat">4K</div>
+                        <div class="stat-label">Resolution</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="fpsstat">60fps</div>
+                        <div class="stat-label">Frame Rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="codecstat">H.264</div>
+                        <div class="stat-label">Codec</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="bitratestat">25 Mbps</div>
+                        <div class="stat-label">Bitrate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Settings Panel -->
+            <div class="settings-panel">
+                <div class="settings-header">
+                    <i class="fas fa-sliders"></i>
+                    <span>Player Settings</span>
+                </div>
+                <div class="settings-content">
+                    <div class="settings-item">
+                        <div class="settings-label">Brightness</div>
+                        <div class="slider-control">
+                            <div class="slider" onclick="setBrightness(event)">
+                                <div class="slider-fill" id="brightnessFill" style="width: 100%;"></div>
+                            </div>
+                            <div class="slider-value" id="brightnessValue">100%</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-item">
+                        <div class="settings-label">Contrast</div>
+                        <div class="slider-control">
+                            <div class="slider" onclick="setContrast(event)">
+                                <div class="slider-fill" id="contrastFill" style="width: 100%;"></div>
+                            </div>
+                            <div class="slider-value" id="contrastValue">100%</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-item">
+                        <div class="settings-label">Saturation</div>
+                        <div class="slider-control">
+                            <div class="slider" onclick="setSaturation(event)">
+                                <div class="slider-fill" id="saturationFill" style="width: 100%;"></div>
+                            </div>
+                            <div class="slider-value" id="saturationValue">100%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Controls -->
+            <div class="quick-controls">
+                <button class="quick-btn" onclick="toggleLoop()" id="loopBtn" title="Loop">
+                    <i class="fas fa-repeat"></i> Loop
+                </button>
+                <button class="quick-btn" onclick="toggleMute()" id="muteBtn" title="Mute">
+                    <i class="fas fa-volume-mute"></i> Mute
+                </button>
+                <button class="quick-btn" onclick="takeScreenshot()" title="Screenshot">
+                    <i class="fas fa-camera"></i> Shot
+                </button>
+                <button class="quick-btn" onclick="toggleTheater()" id="theaterBtn" title="Theater Mode">
+                    <i class="fas fa-maximize"></i> Theater
+                </button>
+            </div>
+
+            <!-- Playlist -->
+            <div class="playlist-panel">
+                <div class="playlist-header-mini">📺 Playlist</div>
+                <div class="playlist-items" id="playlistItems"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal" id="shortcutsModal">
+        <div style="width: 100%; height: 100%; position: relative;">
+            <button class="modal-close" onclick="closeShortcuts()">&times;</button>
+            <div class="modal-content">
+                <div class="modal-header">⌨️ Keyboard Shortcuts</div>
+
+                <div class="shortcut-group">
+                    <div class="shortcut-group-title">Playback</div>
+                    <div class="shortcut-item">
+                        <span>Play / Pause</span>
+                        <span class="shortcut-key">Space</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Mute / Unmute</span>
+                        <span class="shortcut-key">M</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Volume Up</span>
+                        <span class="shortcut-key">↑</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Volume Down</span>
+                        <span class="shortcut-key">↓</span>
+                    </div>
+                </div>
+
+                <div class="shortcut-group">
+                    <div class="shortcut-group-title">Navigation</div>
+                    <div class="shortcut-item">
+                        <span>Forward 5s</span>
+                        <span class="shortcut-key">→</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Backward 5s</span>
+                        <span class="shortcut-key">←</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Forward 10s</span>
+                        <span class="shortcut-key">J</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Backward 10s</span>
+                        <span class="shortcut-key">L</span>
+                    </div>
+                </div>
+
+                <div class="shortcut-group">
+                    <div class="shortcut-group-title">Video Control</div>
+                    <div class="shortcut-item">
+                        <span>Fullscreen</span>
+                        <span class="shortcut-key">F</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Picture in Picture</span>
+                        <span class="shortcut-key">P</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Subtitles</span>
+                        <span class="shortcut-key">C</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Theater Mode</span>
+                        <span class="shortcut-key">T</span>
+                    </div>
+                </div>
+
+                <div class="shortcut-group">
+                    <div class="shortcut-group-title">Other</div>
+                    <div class="shortcut-item">
+                        <span>Increase Speed</span>
+                        <span class="shortcut-key">&gt;</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Decrease Speed</span>
+                        <span class="shortcut-key">&lt;</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Screenshot</span>
+                        <span class="shortcut-key">S</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============== STATE ==============
+        const video = document.getElementById('videoPlayer');
+        const videoContainer = document.getElementById('videoContainer');
+        let isPlaying = false;
+        let currentQuality = '4K';
+        let currentSpeed = 1;
+        let isMuted = false;
+        let isLooping = false;
+        let isTheaterMode = false;
+        let subtitlesEnabled = false;
+
+        const videoList = [
+            {
+                title: '🎬 Amazing Tech Innovations 2024',
+                src: 'https://www.w3schools.com/html/mov_bbb.mp4',
+                artist: 'Tech Channel',
+                views: '1.2M',
+                likes: '45K',
+                date: '2024-01-15',
+                description: 'Discover the latest innovations in technology. This comprehensive video explores cutting-edge developments in AI, quantum computing, and sustainable energy solutions.',
+                duration: '12:45'
+            },
+            {
+                title: '🌍 Journey Around the World',
+                src: 'https://www.w3schools.com/html/movie.mp4',
+                artist: 'Travel Vlog',
+                views: '850K',
+                likes: '32K',
+                date: '2024-01-10',
+                description: 'Join us on an incredible journey exploring the most beautiful destinations around the world. From pristine beaches to breathtaking mountains.',
+                duration: '18:30'
+            },
+            {
+                title: '🎵 Music Festival Highlights',
+                src: 'https://www.w3schools.com/html/mov_bbb.mp4',
+                artist: 'Music Media',
+                views: '2.5M',
+                likes: '120K',
+                date: '2024-01-05',
+                description: 'Experience the energy and excitement of the biggest music festival of the year. Live performances from world-renowned artists.',
+                duration: '22:15'
+            },
+            {
+                title: '🍕 Ultimate Pizza Making Guide',
+                src: 'https://www.w3schools.com/html/movie.mp4',
+                artist: 'Cooking Channel',
+                views: '450K',
+                likes: '28K',
+                date: '2024-01-01',
+                description: 'Learn how to make the perfect pizza from scratch. Professional tips and techniques from Italian master chefs.',
+                duration: '8:45'
+            }
+        ];
+
+        // ============== INITIALIZATION ==============
+        function init() {
+            loadVideo(0);
+            setupEventListeners();
+            renderPlaylist();
+        }
+
+        function setupEventListeners() {
+            video.addEventListener('play', () => {
+                isPlaying = true;
+                updatePlayButton();
+                document.getElementById('playOverlay').classList.add('hide');
+            });
+
+            video.addEventListener('pause', () => {
+                isPlaying = false;
+                updatePlayButton();
+                document.getElementById('playOverlay').classList.remove('hide');
+            });
+
+            video.addEventListener('timeupdate', updateProgress);
+            video.addEventListener('loadedmetadata', updateDuration);
+            video.addEventListener('ended', () => {
+                if (isLooping) {
+                    video.currentTime = 0;
+                    video.play();
+                }
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboard);
+
+            // Mouse hover for overlay
+            videoContainer.addEventListener('mousemove', showOverlay);
+            videoContainer.addEventListener('mouseleave', hideOverlay);
+        }
+
+        // ============== VIDEO LOADING ==============
+        function loadVideo(index) {
+            const videoData = videoList[index];
+            video.src = videoData.src;
+
+            document.getElementById('videoTitle').textContent = videoData.title;
+            document.getElementById('videoTitleMini').textContent = videoData.title;
+            document.getElementById('songArtist').textContent = videoData.artist;
+            document.getElementById('channel').textContent = videoData.artist;
+            document.getElementById('videoDescription').textContent = videoData.description;
+            document.getElementById('viewCount').textContent = videoData.views;
+            document.getElementById('likeCount').textContent = videoData.likes;
+            document.getElementById('uploadDate').textContent = videoData.date;
+
+            updatePlaylist(index);
+        }
+
+        // ============== PLAYBACK CONTROLS ==============
+        function togglePlayPause() {
+            if (isPlaying) {
+                video.pause();
+            } else {
+                video.play();
+            }
+        }
+
+        function updatePlayButton() {
+            const btn = document.getElementById('playBtn');
+            btn.innerHTML = isPlaying ? '<i class="fas fa-pause"></i>' : '<i class="fas fa-play"></i>';
+        }
+
+        function updateProgress() {
+            const percent = (video.currentTime / video.duration) * 100;
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('currentTime').textContent = formatTime(video.currentTime);
+        }
+
+        function updateDuration() {
+            document.getElementById('duration').textContent = formatTime(video.duration);
+        }
+
+        function seek(event) {
+            const rect = document.getElementById('progressBar').getBoundingClientRect();
+            const percent = (event.clientX - rect.left) / rect.width;
+            video.currentTime = percent * video.duration;
+        }
+
+        function formatTime(seconds) {
+            if (!seconds || isNaN(seconds)) return '0:00';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // ============== QUALITY & SPEED ==============
+        function toggleQualityDropdown() {
+            document.getElementById('qualityDropdown').classList.toggle('show');
+        }
+
+        function setQuality(quality) {
+            currentQuality = quality;
+            document.querySelectorAll('#qualityDropdown .dropdown-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            document.getElementById('qualityBadge').textContent = quality;
+            document.getElementById('resolutionStat').textContent = quality;
+            showToast(`Quality changed to ${quality}`);
+        }
+
+        function toggleSpeedDropdown() {
+            document.getElementById('speedDropdown').classList.toggle('show');
+        }
+
+        function setSpeed(speed) {
+            currentSpeed = speed;
+            video.playbackRate = speed;
+            document.querySelectorAll('#speedDropdown .dropdown-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            showToast(`Speed: ${speed}x`);
+        }
+
+        // ============== VOLUME ==============
+        function setVolume(event) {
+            const rect = document.getElementById('volumeSlider').getBoundingClientRect();
+            const percent = (event.clientX - rect.left) / rect.width;
+            const volume = Math.max(0, Math.min(100, percent * 100));
+            video.volume = volume / 100;
+            document.getElementById('volumeBar').style.width = volume + '%';
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            video.muted = isMuted;
+            document.getElementById('muteBtn').classList.toggle('active');
+            showToast(isMuted ? 'Muted' : 'Unmuted');
+        }
+
+        // ============== VIDEO EFFECTS ==============
+        function setBrightness(event) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const percent = (event.clientX - rect.left) / rect.width;
+            const brightness = Math.max(0, Math.min(200, percent * 200));
+            video.style.filter = `brightness(${brightness}%)`;
+            document.getElementById('brightnessFill').style.width = brightness / 2 + '%';
+            document.getElementById('brightnessValue').textContent = Math.round(brightness) + '%';
+        }
+
+        function setContrast(event) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const percent = (event.clientX - rect.left) / rect.width;
+            const contrast = Math.max(0, Math.min(200, percent * 200));
+            video.style.filter = `contrast(${contrast}%)`;
+            document.getElementById('contrastFill').style.width = contrast / 2 + '%';
+            document.getElementById('contrastValue').textContent = Math.round(contrast) + '%';
+        }
+
+        function setSaturation(event) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const percent = (event.clientX - rect.left) / rect.width;
+            const saturation = Math.max(0, Math.min(200, percent * 200));
+            video.style.filter = `saturate(${saturation}%)`;
+            document.getElementById('saturationFill').style.width = saturation / 2 + '%';
+            document.getElementById('saturationValue').textContent = Math.round(saturation) + '%';
+        }
+
+        // ============== SPECIAL FEATURES ==============
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                videoContainer.requestFullscreen().catch(err => console.error(err));
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function togglePIP() {
+            video.requestPictureInPicture().catch(err => console.error(err));
+            showToast('Picture in Picture mode');
+        }
+
+        function toggleSubtitles() {
+            subtitlesEnabled = !subtitlesEnabled;
+            document.getElementById('captions').classList.toggle('show');
+            showToast(subtitlesEnabled ? 'Subtitles ON' : 'Subtitles OFF');
+        }
+
+        function toggleLoop() {
+            isLooping = !isLooping;
+            document.getElementById('loopBtn').classList.toggle('active');
+            showToast(isLooping ? 'Loop ON' : 'Loop OFF');
+        }
+
+        function toggleTheater() {
+            isTheaterMode = !isTheaterMode;
+            document.getElementById('theaterBtn').classList.toggle('active');
+            document.body.style.padding = isTheaterMode ? '0' : '20px';
+            showToast(isTheaterMode ? 'Theater Mode ON' : 'Theater Mode OFF');
+        }
+
+        function takeScreenshot() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL();
+            link.download = 'screenshot.png';
+            link.click();
+            showToast('Screenshot saved!');
+        }
+
+        function toggleSettings() {
+            document.querySelector('.settings-panel').classList.toggle('show');
+        }
+
+        // ============== PLAYLIST ==============
+        function renderPlaylist() {
+            const playlistItems = document.getElementById('playlistItems');
+            playlistItems.innerHTML = videoList.map((video, index) => `
+                <div class="playlist-item-mini ${index === 0 ? 'active' : ''}" onclick="selectVideo(${index})">
+                    📺 ${video.title.substring(0, 25)}...
+                </div>
+            `).join('');
+        }
+
+        function updatePlaylist(index) {
+            document.querySelectorAll('.playlist-item-mini').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+        }
+
+        function selectVideo(index) {
+            loadVideo(index);
+            video.play();
+        }
+
+        // ============== KEYBOARD SHORTCUTS ==============
+        function handleKeyboard(e) {
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    togglePlayPause();
+                    break;
+                case 'KeyM':
+                    toggleMute();
+                    break;
+                case 'KeyF':
+                    toggleFullscreen();
+                    break;
+                case 'KeyC':
+                    toggleSubtitles();
+                    break;
+                case 'KeyP':
+                    togglePIP();
+                    break;
+                case 'KeyT':
+                    toggleTheater();
+                    break;
+                case 'KeyS':
+                    takeScreenshot();
+                    break;
+                case 'ArrowRight':
+                    video.currentTime += 5;
+                    break;
+                case 'ArrowLeft':
+                    video.currentTime -= 5;
+                    break;
+                case 'ArrowUp':
+                    video.volume = Math.min(1, video.volume + 0.1);
+                    break;
+                case 'ArrowDown':
+                    video.volume = Math.max(0, video.volume - 0.1);
+                    break;
+                case 'KeyJ':
+                    video.currentTime -= 10;
+                    break;
+                case 'KeyL':
+                    video.currentTime += 10;
+                    break;
+                case 'Digit0':
+                case 'Digit1':
+                case 'Digit2':
+                case 'Digit3':
+                case 'Digit4':
+                case 'Digit5':
+                case 'Digit6':
+                case 'Digit7':
+                case 'Digit8':
+                case 'Digit9':
+                    const num = parseInt(e.key);
+                    video.currentTime = (num / 10) * video.duration;
+                    break;
+            }
+        }
+
+        // ============== OVERLAY CONTROL ==============
+        function showOverlay() {
+            document.getElementById('videoOverlay').classList.add('show');
+        }
+
+        function hideOverlay() {
+            if (isPlaying) {
+                document.getElementById('videoOverlay').classList.remove('show');
+            }
+        }
+
+        // ============== MODAL ==============
+        function showShortcuts() {
+            document.getElementById('shortcutsModal').classList.add('show');
+        }
+
+        function closeShortcuts() {
+            document.getElementById('shortcutsModal').classList.remove('show');
+        }
+
+        // ============== TOAST NOTIFICATION ==============
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        // ============== DROPDOWN CLOSE ==============
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-content').forEach(el => {
+                    el.classList.remove('show');
+                });
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('shortcutsModal')) {
+                closeShortcuts();
+            }
+        });
+
+        // ============== INITIALIZATION ==============
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
+```
